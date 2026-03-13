@@ -1,7 +1,5 @@
 let isNode = false;//typeof(module) != undefined;
 
-let API_KEY = '<infura api key>'
-
 let BASE_MAINNET = 'base-mainnet';
 let ETHEREUM_SEPOLIA = 'sepolia';
 let AERODROME_ROUTER_ADDRESS = '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43';
@@ -12,9 +10,6 @@ let USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
 
 let ABIS = {};
 let BYTECODES = {};
-
-let PRIVATE_KEY = '<private key>';
-let PUBLIC_KEY = "<eth address>";
 
 if(isNode){
     ethers = require('ethers');
@@ -46,14 +41,17 @@ async function getWethPrice(){
 
     console.log("FACTORY ADDRESS", factoryAddress);
 
-    let amnounts_out = await aero.getAmountsOut("1000000000000000000", [
+    let amnounts_out = await aero.getAmountsOut(
+        "1000000000000000000", 
         [
-            WETH,
-            USDC,                        
-            false,
-            factoryAddress
+            [
+                WETH,
+                USDC,                        
+                false,
+                factoryAddress
+            ]
         ]
-    ])
+    )
 
     document.getElementById('tokenprice').innerHTML = '$' + ethers.formatUnits(amnounts_out[1].toString(), 6) ;
 
@@ -72,10 +70,12 @@ function getFile(contractName){
     }
 }
 
-function buildContract(contractName){
-    let sourceText = getFile(contractName);
+function val(id){
+    return document.getElementById(id).value;
+}
 
-    let sourceCode = {
+function buildContract(sourceText){
+    let spec = {
         language: "Solidity",
         sources: { 
             contract: {
@@ -89,25 +89,25 @@ function buildContract(contractName){
             evmVersion: "istanbul",
             outputSelection: {
                 "*": {
-                "": [
-                    "legacyAST",
-                    "ast"
-                ],
-                "*": [
-                    "abi",
-                    "evm.bytecode.object",
-                    "evm.bytecode.sourceMap",
-                    "evm.deployedBytecode.object",
-                    "evm.deployedBytecode.sourceMap",
-                    "evm.gasEstimates"
-                ]
+                    "": [
+                        "legacyAST",
+                        "ast"
+                    ],
+                    "*": [
+                        "abi",
+                        "evm.bytecode.object",
+                        "evm.bytecode.sourceMap",
+                        "evm.deployedBytecode.object",
+                        "evm.deployedBytecode.sourceMap",
+                        "evm.gasEstimates"
+                    ]
                 },
             }
         }
     };
 
     // Compiling the contract
-    let result = compiler.compile(JSON.stringify(sourceCode), 1);
+    let result = compiler.compile(JSON.stringify(spec), 1);
 
     return result;
 }
@@ -310,6 +310,7 @@ if(isNode){
         buildContract,
         deployTestToken,
         deployFundToken,
+        whitelist,
         
         setTokenPrice,
 
