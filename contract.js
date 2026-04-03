@@ -434,4 +434,116 @@ contract MyToken is IERC20 {
         return true;
     }
 }
+
+
+contract ETFFactory{
+    address[] public funds;
+
+    address owner;
+
+    event FundCreated(address indexed fundAddress, address indexed manager, string name, string symbol);
+
+    constructor(){
+       owner = msg.sender;
+    }
+
+    function makeNewFund  ( 
+        string memory _symbol, 
+        string memory _name, 
+        uint _supply,
+
+        address _stableCoin,
+        uint _seedAmount,
+
+        bool _oracleMode,
+        address _aero) public returns(address fundAddress)
+    { 
+        ETFToken newFund = new ETFToken(
+            _symbol, 
+            _name, 
+            _supply,
+
+            _stableCoin,
+            _seedAmount,
+
+            _oracleMode,
+            _aero
+        );
+
+        address newFundAddress = address(newFund);
+
+        funds.push( newFundAddress );
+
+        emit FundCreated(newFundAddress, msg.sender, _name, _symbol);
+
+        return newFundAddress;
+    }
+
+    function getFundCount() external view returns (uint256 fundsCount) {
+        return funds.length;
+    }
+}
+
+contract FakeAerodrome {
+    address public owner;
+
+    mapping(address => bool) public isOracle;
+
+    constructor(){
+        owner = msg.sender;
+        isOracle[msg.sender] = true;
+    }
+
+    modifier _adminOnly{
+        require(msg.sender == owner, "you are not an admin");
+        _;
+    }
+
+    modifier _oracleOnly{
+        require(isOracle[msg.sender], "you are not a trader");
+        _;
+    }
+
+    mapping (address => uint) public oraclePrices;
+    
+    function setOraclePrice(address token, uint price) _oracleOnly public returns(bool){
+        oraclePrices[token] = price;      
+        return true;  
+    }
+
+    function getAmountsOut(
+            uint256 amountIn, 
+            Route[] memory routes
+        ) public view returns (uint256[] memory amounts)
+    {
+        address tokenFrom = routes[0].from;        
+        address tokenTo = routes[0].to;
+        uint price = oraclePrices[tokenTo];
+        uint amountOut = amountIn / price;
+
+        uint[] memory result = new uint[](1);
+        result[0] = amountOut;
+        return result;
+    }
+
+    function swapExactTokensForTokens(
+            uint256 amountIn,
+            uint256 amountOutMin,
+            Route[] calldata routes,
+            address to,
+            uint256 deadline
+        ) external returns (uint256[] memory amounts)
+    {
+        address tokenTo = routes[0].to;
+
+        uint[] memory amountsOut = getAmountsOut(amountIn, routes);
+        uint amountOut = amountsOut[0];
+
+        IERC20(tokenTo).transfer(to, amountOut);
+    }
+
+    function defaultFactory() external view returns (address){
+        return address(this);
+    }
+}
             `;
